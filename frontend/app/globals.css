@@ -1,0 +1,186 @@
+/* globals.css — Tailwind base + custom global styles */
+
+/* -------------------------
+   Tailwind base layers
+   ------------------------- */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* -------------------------
+   Base customizations
+   ------------------------- */
+:root {
+  --brand: #0ea5e9;
+  --brand-dark: #0369a1;
+  --muted: #6b7280;
+  --bg: #f3f4f6;
+}
+
+html, body, #__next {
+  height: 100%;
+  background-color: var(--bg);
+  color: #111827;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  line-height: 1.4;
+}
+
+h1, h2, h3, h4, h5 {
+  color: #062a3b;
+}
+
+/* -------------------------
+   Custom Components
+   ------------------------- */
+@layer components {
+  /* Brand button */
+  .btn-brand {
+    @apply inline-flex items-center justify-center px-4 py-1.5 rounded-md font-medium text-white;
+    background-color: var(--brand);
+  }
+  .btn-brand:hover {
+    background-color: var(--brand-dark);
+  }
+
+  /* Badge */
+  .badge {
+    @apply inline-flex items-center justify-center rounded-full text-xs px-2 py-0.5 font-semibold;
+    background: #fee2e2;
+    color: #7f1d1d;
+  }
+}
+
+/* -------------------------
+   Layout helpers
+   ------------------------- */
+.main-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+aside {
+  background: white;
+}
+
+nav {
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+
+/* -------------------------
+   Display screen styles
+   ------------------------- */
+.display-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: calc(100vh - 64px);
+  gap: 1.25rem;
+  background: linear-gradient(180deg, rgba(14,165,233,0.06), rgba(14,165,233,0.02));
+}
+
+.display-ticket {
+  font-weight: 800;
+  font-size: clamp(3rem, 8vw, 7rem);
+  color: #059669;
+  text-shadow: 0 6px 18px rgba(5,150,105,0.12);
+}
+
+.display-next {
+  font-size: clamp(1rem, 2.5vw, 1.5rem);
+  color: var(--muted);
+}
+
+/* -------------------------
+   Print-friendly report styles
+   ------------------------- */
+.report {
+  background: white;
+  padding: 24px;
+  border-radius: 8px;
+  color: #111827;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial;
+}
+
+.report-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.report-header .clinic-info {
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
+.report-meta {
+  text-align: right;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.report-section {
+  margin-top: 12px;
+  border-top: 1px dashed #e6e6e6;
+  padding-top: 12px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th, .table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid #f3f4f6;
+  text-align: left;
+  font-size: 0.95rem;
+}
+
+.signature {
+  margin-top: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+@media print {
+  body {
+    background: white !important;
+  }
+  .no-print { display: none !important; }
+  .print-only { display: block !important; }
+  .report {
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    padding: 16mm !important;
+  }
+  .page-break { page-break-after: always; }
+}
+
+/* -------------------------
+   Utilities
+   ------------------------- */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+@media (max-width: 767px) {
+  .main-container {
+    padding: 0 0.75rem;
+  }
+  .display-ticket {
+    font-size: clamp(2rem, 12vw, 4rem);
+  }
+}
+
+:focus {
+  outline: 3px solid rgba(14,165,233,0.18);
+  outline-offset: 2px;
+}
