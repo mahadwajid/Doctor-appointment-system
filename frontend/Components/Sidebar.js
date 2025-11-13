@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import {
   Home,
   Users,
@@ -10,16 +11,37 @@ import {
   FlaskConical,
 } from "lucide-react";
 
-const sidebarLinks = [
-  { href: "/admin", label: "Admin Dashboard", icon: Home },
-  { href: "/doctor", label: "Doctor Dashboard", icon: Stethoscope },
-  { href: "/reception", label: "Reception", icon: Users },
-  { href: "/lab", label: "Lab", icon: FlaskConical },
-  { href: "/display", label: "Display Screen", icon: ClipboardList },
-];
-
 export default function Sidebar({ isOpen }) {
   const pathname = usePathname();
+  const [userRole, setUserRole] = useState(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const userData = localStorage.getItem("user");
+      if (userData) {
+        try {
+          const user = JSON.parse(userData);
+          setUserRole(user.role);
+        } catch (error) {
+          console.error("Error parsing user data:", error);
+        }
+      }
+    }
+  }, []);
+
+  // Define all possible links
+  const allLinks = [
+    { href: "/admin", label: "Admin Dashboard", icon: Home, roles: ["SUPER_ADMIN"] },
+    { href: "/doctor", label: "Doctor Dashboard", icon: Stethoscope, roles: ["DOCTOR", "SUPER_ADMIN"] },
+    { href: "/reception", label: "Reception", icon: Users, roles: ["RECEPTIONIST", "SUPER_ADMIN"] },
+    { href: "/lab", label: "Lab", icon: FlaskConical, roles: ["LAB_STAFF", "SUPER_ADMIN"] },
+    { href: "/display", label: "Display Screen", icon: ClipboardList, roles: ["DOCTOR", "RECEPTIONIST", "LAB_STAFF", "SUPER_ADMIN"] },
+  ];
+
+  // Filter links based on user role
+  const sidebarLinks = userRole
+    ? allLinks.filter((link) => link.roles.includes(userRole))
+    : [];
 
   return (
     <aside

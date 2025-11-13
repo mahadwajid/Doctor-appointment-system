@@ -18,8 +18,21 @@ export default function Navbar({ toggleSidebar }) {
         </h1>
       </div>
       <div className="flex items-center gap-4">
-        <span className="text-gray-600">Welcome, Doctor</span>
-        <button className="rounded bg-blue-600 px-3 py-1 text-white hover:bg-blue-700">
+        <span className="text-gray-600">
+          {typeof window !== "undefined" && localStorage.getItem("user")
+            ? `Welcome, ${JSON.parse(localStorage.getItem("user")).name}`
+            : "Welcome"}
+        </span>
+        <button
+          onClick={() => {
+            if (typeof window !== "undefined") {
+              localStorage.removeItem("token");
+              localStorage.removeItem("user");
+              window.location.href = "/login";
+            }
+          }}
+          className="rounded bg-blue-600 px-3 py-1 text-white hover:bg-blue-700"
+        >
           Logout
         </button>
       </div>

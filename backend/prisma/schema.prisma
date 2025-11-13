@@ -1,0 +1,156 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  DOCTOR
+  RECEPTIONIST
+  LAB_STAFF
+}
+
+enum AppointmentStatus {
+  WAITING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      UserRole
+  doctorId  String?  @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  doctor Doctor?
+
+  @@map("users")
+}
+
+model Doctor {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  name          String
+  specialization String?
+  licenseNumber String?  @unique
+  phone         String?
+  email         String?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  appointments Appointment[]
+  prescriptions Prescription[]
+
+  @@map("doctors")
+}
+
+model Patient {
+  id            String   @id @default(cuid())
+  ticketNumber  Int      @unique
+  name          String
+  phone         String?
+  email         String?
+  age           Int?
+  gender        String?
+  address       String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  appointments Appointment[]
+  labReports   LabReport[]
+  prescriptions Prescription[]
+  medicalRecords MedicalRecord[]
+
+  @@map("patients")
+}
+
+model Appointment {
+  id            String            @id @default(cuid())
+  patientId     String
+  doctorId      String?
+  ticketNumber  Int
+  status        AppointmentStatus @default(WAITING)
+  notes         String?
+  consultationDate DateTime       @default(now())
+  completedAt   DateTime?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctor  Doctor? @relation(fields: [doctorId], references: [id], onDelete: SetNull)
+
+  prescriptions Prescription[]
+  medicalRecords MedicalRecord[]
+
+  @@index([status])
+  @@index([ticketNumber])
+  @@map("appointments")
+}
+
+model Prescription {
+  id            String   @id @default(cuid())
+  appointmentId String
+  patientId     String
+  doctorId      String
+  medications   String   // JSON string of medications array
+  instructions  String?
+  diagnosis     String?
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  patient      Patient    @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctor       Doctor     @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+
+  @@map("prescriptions")
+}
+
+model LabReport {
+  id            String   @id @default(cuid())
+  patientId     String
+  testName      String
+  testType      String?
+  results       String   // JSON string or text
+  fileUrl       String?
+  uploadedBy    String?
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@map("lab_reports")
+}
+
+model MedicalRecord {
+  id            String   @id @default(cuid())
+  patientId     String
+  appointmentId String?
+  recordType    String   // "diagnosis", "observation", "treatment", etc.
+  title         String
+  description   String
+  fileUrl       String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  patient     Patient     @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  appointment Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+
+  @@map("medical_records")
+}
+
