@@ -62,6 +62,15 @@ export const uploadLabReport = async (req, res) => {
       include: { patient: true },
     });
 
+    // Emit socket event for real-time update
+    if (req.io) {
+      req.io.emit('lab-report-uploaded', {
+        patientId: report.patientId,
+        reportId: report.id,
+        testName: report.testName,
+      });
+    }
+
     res.json({ message: 'Lab report uploaded successfully', report });
   } catch (error) {
     console.error(error);

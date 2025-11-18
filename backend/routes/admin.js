@@ -29,6 +29,12 @@ router.post('/receptionists', adminController.createReceptionist);
 // Create lab staff
 router.post('/lab-staff', adminController.createLabStaff);
 
+// Delete any user (Super Admin only)
+router.delete('/users/:id', adminController.deleteUser);
+
+// Delete patient (Super Admin only, bypasses active appointment check)
+router.delete('/patients/:id', adminController.deletePatient);
+
 // Get system statistics
 router.get('/stats', adminController.getStats);
 

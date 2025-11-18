@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Layout from "@/Components/Layout";
 import { useAuth } from "@/middleware/auth";
 import { patientsAPI, appointmentsAPI } from "@/lib/api";
-import { Plus, Printer, Users, Clock } from "lucide-react";
+import { Plus, Printer, Users, Clock, Search, CheckCircle, AlertCircle } from "lucide-react";
 
 export default function ReceptionDashboard() {
   const { user, loading } = useAuth("RECEPTIONIST");
@@ -20,6 +20,10 @@ export default function ReceptionDashboard() {
     address: "",
   });
   const [loadingState, setLoadingState] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [selectedExistingPatient, setSelectedExistingPatient] = useState(null);
 
   useEffect(() => {
     if (user) {
@@ -34,6 +38,52 @@ export default function ReceptionDashboard() {
     } catch (error) {
       console.error("Failed to load appointments:", error);
     }
+  };
+
+  const handleSearchPatient = async () => {
+    if (!searchQuery.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      const results = await patientsAPI.search(searchQuery);
+      setSearchResults(results);
+    } catch (error) {
+      console.error("Search failed:", error);
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleSelectExistingPatient = (patient) => {
+    setSelectedExistingPatient(patient);
+    setFormData({
+      name: patient.name || "",
+      phone: patient.phone || "",
+      email: patient.email || "",
+      age: patient.age || "",
+      gender: patient.gender || "",
+      address: patient.address || "",
+    });
+    setSearchQuery("");
+    setSearchResults([]);
+  };
+
+  const handleClearSelection = () => {
+    setSelectedExistingPatient(null);
+    setFormData({
+      name: "",
+      phone: "",
+      email: "",
+      age: "",
+      gender: "",
+      address: "",
+    });
+    setSearchQuery("");
+    setSearchResults([]);
   };
 
   const handleAddPatient = async (e) => {
@@ -51,8 +101,15 @@ export default function ReceptionDashboard() {
         gender: "",
         address: "",
       });
+      setSelectedExistingPatient(null);
+      setSearchQuery("");
+      setSearchResults([]);
       loadWaitingAppointments();
-      alert(`Patient registered! Ticket #${response.appointment.ticketNumber}`);
+      
+      const message = response.isNewPatient 
+        ? `New patient registered! Ticket #${response.appointment.ticketNumber}`
+        : `Appointment created for existing patient! Ticket #${response.appointment.ticketNumber}`;
+      alert(message);
       
       // Print ticket (thermal printer simulation)
       printTicket(response.patient, response.appointment);
@@ -126,7 +183,23 @@ export default function ReceptionDashboard() {
           <div className="mb-4 flex items-center justify-between">
             <h3 className="text-xl font-semibold">Register New Patient</h3>
             <button
-              onClick={() => setShowForm(!showForm)}
+              onClick={() => {
+                setShowForm(!showForm);
+                if (showForm) {
+                  // Reset form when closing
+                  setFormData({
+                    name: "",
+                    phone: "",
+                    email: "",
+                    age: "",
+                    gender: "",
+                    address: "",
+                  });
+                  setSelectedExistingPatient(null);
+                  setSearchQuery("");
+                  setSearchResults([]);
+                }
+              }}
               className="flex items-center gap-2 rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
             >
               <Plus size={20} />
@@ -135,8 +208,106 @@ export default function ReceptionDashboard() {
           </div>
 
           {showForm && (
-            <form onSubmit={handleAddPatient} className="space-y-4">
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="space-y-4">
+              {/* Patient Search Section */}
+              {!selectedExistingPatient && (
+                <div className="rounded-lg bg-blue-50 p-4 border-2 border-blue-200">
+                  <div className="mb-3">
+                    <label className="mb-2 block text-sm font-semibold text-gray-700">
+                      <Search className="inline mr-2" size={16} />
+                      Search for Existing Patient (Optional)
+                    </label>
+                    <p className="text-xs text-gray-600 mb-2">
+                      Search by phone or email to check if patient already exists. If found, we'll create an appointment for the existing patient.
+                    </p>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onKeyPress={(e) => e.key === "Enter" && handleSearchPatient()}
+                        placeholder="Enter phone number or email..."
+                        className="flex-1 rounded border px-3 py-2 focus:border-blue-500 focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleSearchPatient}
+                        disabled={isSearching || !searchQuery.trim()}
+                        className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
+                      >
+                        {isSearching ? "Searching..." : "Search"}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Search Results */}
+                  {searchResults.length > 0 && (
+                    <div className="mt-3 max-h-48 overflow-y-auto rounded border bg-white">
+                      <p className="p-2 text-xs font-semibold text-gray-600 bg-gray-50">Found {searchResults.length} patient(s):</p>
+                      {searchResults.map((patient) => (
+                        <div
+                          key={patient.id}
+                          onClick={() => handleSelectExistingPatient(patient)}
+                          className="cursor-pointer border-b p-3 hover:bg-blue-50 transition-colors"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="font-semibold">{patient.name}</p>
+                              <p className="text-sm text-gray-600">
+                                {patient.phone && `Phone: ${patient.phone}`}
+                                {patient.phone && patient.email && " • "}
+                                {patient.email && `Email: ${patient.email}`}
+                              </p>
+                              {patient.age && (
+                                <p className="text-xs text-gray-500">Age: {patient.age} • Gender: {patient.gender || "N/A"}</p>
+                              )}
+                            </div>
+                            <CheckCircle className="text-green-600" size={20} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {searchQuery && searchResults.length === 0 && !isSearching && (
+                    <div className="mt-3 rounded border bg-yellow-50 p-3 text-sm text-yellow-700">
+                      <AlertCircle className="inline mr-2" size={16} />
+                      No existing patient found. A new patient will be created.
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Selected Existing Patient Info */}
+              {selectedExistingPatient && (
+                <div className="rounded-lg bg-green-50 p-4 border-2 border-green-200">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <CheckCircle className="text-green-600" size={20} />
+                        <p className="font-semibold text-green-800">Existing Patient Selected</p>
+                      </div>
+                      <p className="text-sm text-gray-700">
+                        <strong>Name:</strong> {selectedExistingPatient.name} | 
+                        <strong> Ticket #:</strong> {selectedExistingPatient.ticketNumber}
+                      </p>
+                      <p className="text-xs text-gray-600 mt-1">
+                        An appointment will be created for this existing patient. You can update the information below if needed.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleClearSelection}
+                      className="rounded bg-gray-300 px-3 py-1 text-sm hover:bg-gray-400"
+                    >
+                      Change
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <form onSubmit={handleAddPatient} className="space-y-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>
                   <label className="mb-1 block text-sm font-medium">Name *</label>
                   <input
@@ -202,9 +373,14 @@ export default function ReceptionDashboard() {
                 disabled={loadingState}
                 className="rounded bg-blue-600 px-6 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
               >
-                {loadingState ? "Registering..." : "Register Patient & Generate Ticket"}
+                {loadingState 
+                  ? "Processing..." 
+                  : selectedExistingPatient 
+                    ? "Create Appointment for Existing Patient" 
+                    : "Register Patient & Generate Ticket"}
               </button>
             </form>
+            </div>
           )}
         </div>
 

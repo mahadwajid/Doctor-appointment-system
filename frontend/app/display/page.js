@@ -39,13 +39,21 @@ export default function DisplayScreen() {
             next: data.waiting?.[0] || null,
             waitingCount: data.waiting?.length || 0,
           });
+          setLoading(false);
         });
 
         socket.on("patient-called", (data) => {
+          // Immediately refresh queue status
           loadQueueStatus();
         });
 
-        socket.on("appointment-completed", () => {
+        socket.on("appointment-completed", (data) => {
+          // Immediately refresh queue status when appointment is completed
+          loadQueueStatus();
+        });
+
+        socket.on("new-patient", () => {
+          // Refresh when new patient is added
           loadQueueStatus();
         });
       } catch (error) {
@@ -55,14 +63,15 @@ export default function DisplayScreen() {
 
     setupSocket();
 
-    // Poll for updates every 5 seconds as fallback
-    interval = setInterval(loadQueueStatus, 5000);
+    // Poll for updates every 2 seconds as fallback (more frequent for better responsiveness)
+    interval = setInterval(loadQueueStatus, 2000);
 
     return () => {
       if (socket) {
         socket.off("queue-update");
         socket.off("patient-called");
         socket.off("appointment-completed");
+        socket.off("new-patient");
       }
       if (interval) {
         clearInterval(interval);

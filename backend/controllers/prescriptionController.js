@@ -56,6 +56,15 @@ export const createPrescription = async (req, res) => {
       },
     });
 
+    // Emit socket event for real-time update
+    if (req.io) {
+      req.io.emit('prescription-created', {
+        patientId: prescription.patientId,
+        appointmentId: prescription.appointmentId,
+        prescriptionId: prescription.id,
+      });
+    }
+
     res.json({ message: 'Prescription created successfully', prescription });
   } catch (error) {
     console.error(error);

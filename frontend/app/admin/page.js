@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import Layout from "@/Components/Layout";
 import { useAuth } from "@/middleware/auth";
 import { adminAPI } from "@/lib/api";
-import { Plus, Trash2, Users, Stethoscope, ClipboardList, Activity, FileText, Clock, UserPlus } from "lucide-react";
+import { Plus, Trash2, Users, Stethoscope, ClipboardList, Activity, FileText, Clock, UserPlus, Edit2, Search, X } from "lucide-react";
+import { patientsAPI } from "@/lib/api";
 
 export default function AdminDashboard() {
   const { user, loading } = useAuth("SUPER_ADMIN");
@@ -13,7 +14,18 @@ export default function AdminDashboard() {
   const [labStaff, setLabStaff] = useState([]);
   const [stats, setStats] = useState(null);
   const [logs, setLogs] = useState([]);
+  const [patients, setPatients] = useState([]);
   const [activeTab, setActiveTab] = useState("overview");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [editingPatient, setEditingPatient] = useState(null);
+  const [patientFormData, setPatientFormData] = useState({
+    name: "",
+    phone: "",
+    email: "",
+    age: "",
+    gender: "",
+    address: "",
+  });
   
   // Forms state
   const [showDoctorForm, setShowDoctorForm] = useState(false);
@@ -56,7 +68,17 @@ export default function AdminDashboard() {
       loadLabStaff(),
       loadStats(),
       loadLogs(),
+      loadPatients(),
     ]);
+  };
+
+  const loadPatients = async () => {
+    try {
+      const data = await patientsAPI.getAll();
+      setPatients(data);
+    } catch (error) {
+      console.error("Failed to load patients:", error);
+    }
   };
 
   const loadDoctors = async () => {
@@ -163,6 +185,70 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleUpdatePatient = async (e) => {
+    e.preventDefault();
+    if (!editingPatient) return;
+    
+    setLoadingState(true);
+    try {
+      await patientsAPI.update(editingPatient.id, patientFormData);
+      setEditingPatient(null);
+      setPatientFormData({ name: "", phone: "", email: "", age: "", gender: "", address: "" });
+      await loadPatients();
+      alert("Patient updated successfully!");
+    } catch (error) {
+      alert("Failed to update patient: " + error.message);
+    } finally {
+      setLoadingState(false);
+    }
+  };
+
+  const handleDeletePatient = async (id) => {
+    if (!confirm("Are you sure you want to delete this patient? This will also delete all related appointments, prescriptions, and lab reports. This action cannot be undone.")) return;
+    try {
+      // Use admin endpoint which bypasses active appointment check
+      await adminAPI.deletePatient(id);
+      await loadPatients();
+      alert("Patient deleted successfully!");
+    } catch (error) {
+      alert("Failed to delete patient: " + error.message);
+    }
+  };
+
+  const handleDeleteUser = async (id, userName, userRole) => {
+    if (!confirm(`Are you sure you want to delete ${userName} (${userRole})? This action cannot be undone and will delete all related data.`)) return;
+    try {
+      await adminAPI.deleteUser(id);
+      await loadData();
+      alert("User deleted successfully!");
+    } catch (error) {
+      alert("Failed to delete user: " + error.message);
+    }
+  };
+
+  const handleEditClick = (patient) => {
+    setEditingPatient(patient);
+    setPatientFormData({
+      name: patient.name || "",
+      phone: patient.phone || "",
+      email: patient.email || "",
+      age: patient.age || "",
+      gender: patient.gender || "",
+      address: patient.address || "",
+    });
+  };
+
+  const filteredPatients = patients.filter(patient => {
+    if (!searchQuery) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      patient.name?.toLowerCase().includes(query) ||
+      patient.phone?.toLowerCase().includes(query) ||
+      patient.email?.toLowerCase().includes(query) ||
+      patient.ticketNumber?.toString().includes(query)
+    );
+  });
+
   const getLogIcon = (type) => {
     switch (type) {
       case 'APPOINTMENT': return <Clock className="text-blue-600" size={16} />;
@@ -199,6 +285,14 @@ export default function AdminDashboard() {
             }`}
           >
             Manage Users
+          </button>
+          <button
+            onClick={() => setActiveTab("patients")}
+            className={`px-4 py-2 font-semibold ${
+              activeTab === "patients" ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-600"
+            }`}
+          >
+            Patients
           </button>
           <button
             onClick={() => setActiveTab("logs")}
@@ -523,9 +617,18 @@ export default function AdminDashboard() {
                 <h3 className="mb-4 text-xl font-semibold">Receptionists ({receptionists.length})</h3>
                 <div className="max-h-96 space-y-2 overflow-y-auto">
                   {receptionists.map((receptionist) => (
-                    <div key={receptionist.id} className="rounded border p-2">
-                      <p className="font-semibold">{receptionist.name}</p>
-                      <p className="text-sm text-gray-600">{receptionist.email}</p>
+                    <div key={receptionist.id} className="flex items-center justify-between rounded border p-2">
+                      <div>
+                        <p className="font-semibold">{receptionist.name}</p>
+                        <p className="text-sm text-gray-600">{receptionist.email}</p>
+                      </div>
+                      <button
+                        onClick={() => handleDeleteUser(receptionist.id, receptionist.name, 'Receptionist')}
+                        className="rounded bg-red-600 px-2 py-1 text-white hover:bg-red-700"
+                        title="Delete Receptionist"
+                      >
+                        <Trash2 size={16} />
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -536,14 +639,231 @@ export default function AdminDashboard() {
                 <h3 className="mb-4 text-xl font-semibold">Lab Staff ({labStaff.length})</h3>
                 <div className="max-h-96 space-y-2 overflow-y-auto">
                   {labStaff.map((staff) => (
-                    <div key={staff.id} className="rounded border p-2">
-                      <p className="font-semibold">{staff.name}</p>
-                      <p className="text-sm text-gray-600">{staff.email}</p>
+                    <div key={staff.id} className="flex items-center justify-between rounded border p-2">
+                      <div>
+                        <p className="font-semibold">{staff.name}</p>
+                        <p className="text-sm text-gray-600">{staff.email}</p>
+                      </div>
+                      <button
+                        onClick={() => handleDeleteUser(staff.id, staff.name, 'Lab Staff')}
+                        className="rounded bg-red-600 px-2 py-1 text-white hover:bg-red-700"
+                        title="Delete Lab Staff"
+                      >
+                        <Trash2 size={16} />
+                      </button>
                     </div>
                   ))}
                 </div>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Patients Management Tab */}
+        {activeTab === "patients" && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-2xl font-bold text-blue-600">Patient Management</h3>
+              <button
+                onClick={loadPatients}
+                className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+              >
+                Refresh
+              </button>
+            </div>
+
+            {/* Search Bar */}
+            <div className="rounded-lg bg-white p-4 shadow-md">
+              <div className="flex items-center gap-2">
+                <Search className="text-gray-400" size={20} />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search by name, phone, email, or ticket number..."
+                  className="flex-1 rounded border px-4 py-2 focus:border-blue-500 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            {/* Patients Table */}
+            <div className="rounded-lg bg-white p-6 shadow-md">
+              <div className="mb-4 flex items-center justify-between">
+                <h4 className="text-lg font-semibold">
+                  All Patients ({filteredPatients.length})
+                </h4>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b bg-gray-50">
+                      <th className="px-4 py-3 text-left text-sm font-semibold">Ticket #</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold">Name</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold">Phone</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold">Email</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold">Age</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold">Gender</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold">Registered</th>
+                      <th className="px-4 py-3 text-center text-sm font-semibold">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredPatients.map((patient) => (
+                      <tr key={patient.id} className="border-b hover:bg-gray-50">
+                        <td className="px-4 py-3 font-bold text-blue-600">
+                          #{patient.ticketNumber}
+                        </td>
+                        <td className="px-4 py-3 font-semibold">{patient.name}</td>
+                        <td className="px-4 py-3">{patient.phone || "-"}</td>
+                        <td className="px-4 py-3">{patient.email || "-"}</td>
+                        <td className="px-4 py-3">{patient.age || "-"}</td>
+                        <td className="px-4 py-3">{patient.gender || "-"}</td>
+                        <td className="px-4 py-3 text-sm text-gray-600">
+                          {new Date(patient.createdAt).toLocaleDateString()}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center justify-center gap-2">
+                            <button
+                              onClick={() => handleEditClick(patient)}
+                              className="rounded bg-blue-600 px-3 py-1 text-white hover:bg-blue-700"
+                              title="Edit Patient"
+                            >
+                              <Edit2 size={16} />
+                            </button>
+                            <button
+                              onClick={() => handleDeletePatient(patient.id)}
+                              className="rounded bg-red-600 px-3 py-1 text-white hover:bg-red-700"
+                              title="Delete Patient"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {filteredPatients.length === 0 && (
+                      <tr>
+                        <td colSpan="8" className="px-4 py-8 text-center text-gray-500">
+                          {searchQuery ? "No patients found matching your search" : "No patients registered yet"}
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Edit Patient Modal */}
+            {editingPatient && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+                <div className="w-full max-w-2xl rounded-lg bg-white p-6 shadow-xl">
+                  <div className="mb-4 flex items-center justify-between">
+                    <h3 className="text-2xl font-bold text-blue-600">Edit Patient</h3>
+                    <button
+                      onClick={() => {
+                        setEditingPatient(null);
+                        setPatientFormData({ name: "", phone: "", email: "", age: "", gender: "", address: "" });
+                      }}
+                      className="rounded-full bg-gray-200 p-2 hover:bg-gray-300"
+                    >
+                      <X size={24} />
+                    </button>
+                  </div>
+                  <form onSubmit={handleUpdatePatient} className="space-y-4">
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                      <div>
+                        <label className="mb-1 block text-sm font-medium">Name *</label>
+                        <input
+                          type="text"
+                          value={patientFormData.name}
+                          onChange={(e) => setPatientFormData({ ...patientFormData, name: e.target.value })}
+                          required
+                          className="w-full rounded border px-3 py-2"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-sm font-medium">Phone</label>
+                        <input
+                          type="tel"
+                          value={patientFormData.phone}
+                          onChange={(e) => setPatientFormData({ ...patientFormData, phone: e.target.value })}
+                          className="w-full rounded border px-3 py-2"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-sm font-medium">Email</label>
+                        <input
+                          type="email"
+                          value={patientFormData.email}
+                          onChange={(e) => setPatientFormData({ ...patientFormData, email: e.target.value })}
+                          className="w-full rounded border px-3 py-2"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-sm font-medium">Age</label>
+                        <input
+                          type="number"
+                          value={patientFormData.age}
+                          onChange={(e) => setPatientFormData({ ...patientFormData, age: e.target.value })}
+                          className="w-full rounded border px-3 py-2"
+                          min="0"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-sm font-medium">Gender</label>
+                        <select
+                          value={patientFormData.gender}
+                          onChange={(e) => setPatientFormData({ ...patientFormData, gender: e.target.value })}
+                          className="w-full rounded border px-3 py-2"
+                        >
+                          <option value="">Select</option>
+                          <option value="Male">Male</option>
+                          <option value="Female">Female</option>
+                          <option value="Other">Other</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-sm font-medium">Ticket Number</label>
+                        <input
+                          type="text"
+                          value={editingPatient.ticketNumber}
+                          disabled
+                          className="w-full rounded border bg-gray-100 px-3 py-2 text-gray-600"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-sm font-medium">Address</label>
+                      <textarea
+                        value={patientFormData.address}
+                        onChange={(e) => setPatientFormData({ ...patientFormData, address: e.target.value })}
+                        rows={3}
+                        className="w-full rounded border px-3 py-2"
+                      />
+                    </div>
+                    <div className="flex gap-2 pt-4">
+                      <button
+                        type="submit"
+                        disabled={loadingState}
+                        className="flex-1 rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
+                      >
+                        {loadingState ? "Updating..." : "Update Patient"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingPatient(null);
+                          setPatientFormData({ name: "", phone: "", email: "", age: "", gender: "", address: "" });
+                        }}
+                        className="rounded bg-gray-300 px-4 py-2 hover:bg-gray-400"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

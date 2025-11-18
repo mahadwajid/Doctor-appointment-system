@@ -20,9 +20,13 @@ const apiCall = async (endpoint, options = {}) => {
     headers.Authorization = `Bearer ${token}`;
   }
 
+  // Extract cache option if provided
+  const { cache, ...fetchOptions } = options;
+
   const response = await fetch(`${API_URL}${endpoint}`, {
-    ...options,
+    ...fetchOptions,
     headers,
+    cache: cache || 'default',
   });
 
   if (!response.ok) {
@@ -71,6 +75,12 @@ export const adminAPI = {
   }),
   getStats: () => apiCall('/admin/stats'),
   getLogs: (limit) => apiCall(`/admin/logs${limit ? `?limit=${limit}` : ''}`),
+  deleteUser: (id) => apiCall(`/admin/users/${id}`, {
+    method: 'DELETE',
+  }),
+  deletePatient: (id) => apiCall(`/admin/patients/${id}`, {
+    method: 'DELETE',
+  }),
 };
 
 // Patients API
@@ -80,6 +90,13 @@ export const patientsAPI = {
   create: (patientData) => apiCall('/patients', {
     method: 'POST',
     body: JSON.stringify(patientData),
+  }),
+  update: (id, patientData) => apiCall(`/patients/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(patientData),
+  }),
+  delete: (id) => apiCall(`/patients/${id}`, {
+    method: 'DELETE',
   }),
   search: (query) => apiCall(`/patients/search/${query}`),
 };
@@ -159,6 +176,11 @@ export const medicalRecordsAPI = {
 
 // Queue API
 export const queueAPI = {
-  getStatus: () => apiCall('/queue/status'),
+  getStatus: () => apiCall('/queue/status', {
+    cache: 'no-store',
+    headers: {
+      'Cache-Control': 'no-cache',
+    },
+  }),
 };
 

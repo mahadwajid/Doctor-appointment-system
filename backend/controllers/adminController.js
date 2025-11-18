@@ -182,6 +182,59 @@ export const getStats = async (req, res) => {
   }
 };
 
+export const deleteUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Find the user
+    const user = await prisma.user.findUnique({
+      where: { id },
+      include: { doctor: true },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Prevent deleting Super Admin
+    if (user.role === 'SUPER_ADMIN') {
+      return res.status(403).json({ error: 'Cannot delete Super Admin account' });
+    }
+
+    // Super Admin can delete any user regardless of appointments or other constraints
+    // Prisma will handle cascade deletes based on schema relationships
+    if (user.doctor) {
+      // If user is a doctor, delete the doctor record first (cascade will delete user)
+      await prisma.doctor.delete({ where: { id: user.doctor.id } });
+    } else {
+      // For other users (receptionist, lab staff), delete directly
+      await prisma.user.delete({ where: { id } });
+    }
+
+    res.json({ message: 'User deleted successfully' });
+  } catch (error) {
+    console.error(error);
+    res.status(400).json({ error: error.message });
+  }
+};
+
+export const deletePatient = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Super Admin can delete any patient regardless of active appointments
+    // Prisma cascade will handle related records (appointments, prescriptions, lab reports, etc.)
+    await prisma.patient.delete({
+      where: { id },
+    });
+
+    res.json({ message: 'Patient deleted successfully' });
+  } catch (error) {
+    console.error(error);
+    res.status(400).json({ error: error.message });
+  }
+};
+
 export const getSystemLogs = async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 50;
