@@ -5,7 +5,7 @@ import Layout from "@/Components/Layout";
 import { useAuth } from "@/middleware/auth";
 import { appointmentsAPI, prescriptionsAPI, patientsAPI } from "@/lib/api";
 import { getSocket } from "@/lib/socket";
-import { Phone, CheckCircle, History, Plus, Printer, X, FileText, Calendar, Stethoscope, TestTube, FileDown } from "lucide-react";
+import { Phone, CheckCircle, History, Plus, Printer, X, FileText, Calendar, Stethoscope, TestTube, FileDown, Users } from "lucide-react";
 
 export default function DoctorDashboard() {
   const { user, loading } = useAuth("DOCTOR");
@@ -289,6 +289,16 @@ export default function DoctorDashboard() {
     // Get patient name from prescription.patient or fallback to current patient history
     const patientName = prescription.patient?.name || patientHistory?.name || currentAppointment?.patient?.name || "Patient";
     
+    // Get doctor information
+    const doctor = user?.doctor || prescription.doctor;
+    const doctorName = doctor?.name || user?.name || "Dr. M. Shahid Ghani";
+    const doctorSpecialization = doctor?.specialization || "M.B.B.S, M.C.P.S. (Pak), F.A.C.P";
+    const doctorLicense = doctor?.licenseNumber || "9703-N";
+    const doctorPhone = doctor?.phone || "0315-1600006";
+    const clinicName = "NISAR MEDICAL CENTER";
+    const clinicAddress = "Bahadur Khan Road, Opp. TMA, Shamsi Road, Mardan";
+    const clinicPhones = doctorPhone + " | 0937-866877";
+    
     // Parse medications safely
     let medications = [];
     try {
@@ -302,105 +312,621 @@ export default function DoctorDashboard() {
       medications = [];
     }
 
+    // Format date
+    const prescriptionDate = new Date(prescription.createdAt);
+    const formattedDate = prescriptionDate.toLocaleDateString('en-GB', { 
+      day: '2-digit', 
+      month: '2-digit', 
+      year: 'numeric' 
+    }).replace(/\//g, ' / ');
+
+    // Format medications for prescription lines - handle long lists efficiently
+    let medicationsHTML = '';
+    if (medications.length > 0) {
+      medicationsHTML = medications.map((m, idx) => {
+        // Handle long medication names by allowing word wrap, compact spacing for long lists
+        const spacing = medications.length > 20 ? '4px' : '6px';
+        return `<div style="padding-left: 20px; margin-bottom: ${spacing}; font-size: 13px; line-height: 1.4; word-wrap: break-word; overflow-wrap: break-word; white-space: pre-wrap;">${idx + 1}. ${m}</div>`;
+      }).join('');
+    } else {
+      medicationsHTML = '<div style="padding-left: 20px; color: #94a3b8; font-style: italic;">No medications prescribed</div>';
+    }
+
+    // Build prescription content with better handling for long content
+    let prescriptionContent = '';
+    if (prescription.diagnosis) {
+      prescriptionContent += `<div style="margin-bottom: 10px; word-wrap: break-word; line-height: 1.5;"><strong style="color: var(--primary-color);">Diagnosis:</strong> ${prescription.diagnosis}</div>`;
+    }
+    prescriptionContent += `<div style="margin-bottom: 8px;"><strong style="color: var(--primary-color);">Medications:</strong></div>${medicationsHTML}`;
+    if (prescription.instructions) {
+      // Handle long instructions with word wrap and line breaks
+      const instructionsLines = prescription.instructions.split('\n').map(line => line.trim()).filter(line => line);
+      const instructionsHTML = instructionsLines.length > 0 
+        ? instructionsLines.map(line => `<div style="margin-bottom: 3px; word-wrap: break-word; line-height: 1.4; white-space: pre-wrap;">${line}</div>`).join('')
+        : `<div style="word-wrap: break-word; line-height: 1.4; white-space: pre-wrap;">${prescription.instructions}</div>`;
+      prescriptionContent += `<div style="margin-top: 12px; margin-bottom: 10px;"><strong style="color: var(--primary-color);">Instructions:</strong><div style="padding-left: 20px; margin-top: 4px;">${instructionsHTML}</div></div>`;
+    }
+    if (prescription.notes) {
+      // Handle long notes with word wrap and line breaks
+      const notesLines = prescription.notes.split('\n').map(line => line.trim()).filter(line => line);
+      const notesHTML = notesLines.length > 0 
+        ? notesLines.map(line => `<div style="margin-bottom: 3px; word-wrap: break-word; line-height: 1.4; white-space: pre-wrap;">${line}</div>`).join('')
+        : `<div style="word-wrap: break-word; line-height: 1.4; white-space: pre-wrap;">${prescription.notes}</div>`;
+      prescriptionContent += `<div style="margin-top: 12px;"><strong style="color: var(--primary-color);">Notes:</strong><div style="padding-left: 20px; margin-top: 4px;">${notesHTML}</div></div>`;
+    }
+
     const printWindow = window.open("", "_blank");
     const printContent = `
-      <html>
-        <head>
-          <title>Prescription</title>
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Modern Prescription - ${doctorName}</title>
+          <link rel="preconnect" href="https://fonts.googleapis.com">
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+          <link href="https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&family=Open+Sans:wght@400;600&family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+          <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
           <style>
-            @media print {
-              @page { margin: 20mm; }
-            }
-            body { font-family: Arial, sans-serif; padding: 20px; }
-            .header { text-align: center; margin-bottom: 30px; }
-            .patient-info { margin-bottom: 20px; }
-            .section { margin: 20px 0; }
-            .medications { margin: 10px 0; padding-left: 20px; }
+              :root {
+                  --primary-color: #0e7490; /* Teal Blue */
+                  --secondary-color: #155e75; /* Darker Teal */
+                  --accent-red: #dc2626; /* Medical Red */
+                  --light-bg: #f0f9ff; /* Very light blue bg */
+                  --text-dark: #1e293b;
+                  --text-light: #64748b;
+                  --border-color: #cbd5e1;
+              }
+              * {
+                  box-sizing: border-box;
+                  margin: 0;
+                  padding: 0;
+              }
+              body {
+                  background-color: #e2e8f0;
+                  font-family: 'Poppins', sans-serif;
+                  display: flex;
+                  justify-content: center;
+                  padding: 40px 20px;
+                  color: var(--text-dark);
+              }
+              /* A4 Sheet */
+              .page-container {
+                  background-color: white;
+                  width: 210mm;
+                  min-height: 297mm;
+                  position: relative;
+                  box-shadow: 0 20px 50px rgba(0,0,0,0.1);
+                  display: flex;
+                  flex-direction: column;
+                  overflow: visible;
+                  margin: 0 auto;
+              }
+              /* --- HEADER --- */
+              header {
+                  padding: 30px 25px 18px 25px;
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: flex-start;
+                  border-bottom: 2px solid var(--primary-color);
+                  background: linear-gradient(to bottom, #ffffff, #f8fafc);
+                  flex-shrink: 0;
+              }
+              .doc-profile {
+                  display: flex;
+                  gap: 20px;
+                  align-items: center;
+              }
+              .logo-box {
+                  width: 80px;
+                  height: 80px;
+                  background-color: var(--primary-color) !important;
+                  color: white !important;
+                  border-radius: 50%;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  font-size: 32px;
+                  box-shadow: 0 4px 10px rgba(14, 116, 144, 0.3);
+                  -webkit-print-color-adjust: exact;
+                  print-color-adjust: exact;
+                  color-adjust: exact;
+              }
+              .doc-info h1 {
+                  color: var(--secondary-color);
+                  font-size: 26px;
+                  font-weight: 700;
+                  line-height: 1.2;
+              }
+              .doc-info p {
+                  font-family: 'Open Sans', sans-serif;
+                  font-size: 12px;
+                  color: var(--text-light);
+                  margin-top: 4px;
+              }
+              .highlight-degrees {
+                  color: var(--primary-color);
+                  font-weight: 600;
+                  font-size: 13px;
+                  margin-bottom: 4px;
+                  display: block;
+              }
+              /* --- PATIENT INFO BAR --- */
+              .patient-section {
+                  background-color: var(--light-bg);
+                  padding: 12px 25px;
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: center;
+                  border-bottom: 1px solid var(--border-color);
+                  flex-shrink: 0;
+              }
+              .input-group {
+                  display: flex;
+                  align-items: center;
+                  gap: 10px;
+              }
+              .label {
+                  font-weight: 600;
+                  font-size: 14px;
+                  color: var(--secondary-color);
+                  text-transform: uppercase;
+                  letter-spacing: 0.5px;
+              }
+              .input-line {
+                  border-bottom: 1px dashed var(--text-light);
+                  width: 250px;
+                  color: var(--text-dark);
+                  font-family: 'Open Sans', sans-serif;
+                  font-size: 16px;
+                  padding-left: 5px;
+                  min-width: 200px;
+              }
+              .date-box {
+                  background: white;
+                  padding: 5px 15px;
+                  border-radius: 20px;
+                  border: 1px solid var(--border-color);
+                  font-size: 14px;
+                  font-weight: 600;
+                  color: var(--primary-color);
+              }
+              /* --- MAIN BODY --- */
+              .main-body {
+                  display: flex;
+                  flex: 1;
+                  min-height: 0;
+                  position: relative;
+                  overflow: visible;
+              }
+              /* Watermark Background */
+              .watermark {
+                  position: absolute;
+                  top: 50%;
+                  left: 50%;
+                  transform: translate(-50%, -50%);
+                  opacity: 0.03;
+                  pointer-events: none;
+                  font-size: 400px;
+                  color: var(--primary-color);
+                  z-index: 0;
+              }
+              /* Left Sidebar (Vitals) */
+              .sidebar {
+                  width: 20%;
+                  background-color: #fafafa;
+                  border-right: 1px solid var(--border-color);
+                  padding: 25px 15px;
+                  display: flex;
+                  flex-direction: column;
+                  gap: 25px;
+                  z-index: 1;
+                  flex-shrink: 0;
+              }
+              .sidebar-title {
+                  font-family: 'Poppins', sans-serif;
+                  font-size: 12px;
+                  color: var(--accent-red);
+                  font-weight: 700;
+                  text-transform: uppercase;
+                  margin-bottom: 10px;
+                  display: flex;
+                  align-items: center;
+                  gap: 8px;
+              }
+              .vital-box {
+                  margin-bottom: 15px;
+              }
+              .vital-label {
+                  font-size: 12px;
+                  color: var(--text-light);
+                  display: block;
+                  margin-bottom: 5px;
+              }
+              .vital-input {
+                  width: 100%;
+                  border: 1px solid #e2e8f0;
+                  background: white;
+                  height: 35px;
+                  border-radius: 6px;
+              }
+              /* Prescription Area */
+              .rx-area {
+                  width: 80%;
+                  padding: 30px 25px;
+                  position: relative;
+                  z-index: 1;
+                  overflow: visible;
+              }
+              .rx-header {
+                  font-size: 48px;
+                  font-weight: 700;
+                  color: var(--accent-red);
+                  font-family: serif;
+                  margin-bottom: 20px;
+                  display: flex;
+                  align-items: center;
+                  justify-content: space-between;
+              }
+              .rx-lines {
+                  width: 100%;
+                  min-height: 400px;
+                  padding: 10px 0;
+                  font-family: 'Open Sans', sans-serif;
+                  font-size: 13px;
+                  line-height: 36px;
+                  overflow: visible;
+                  word-wrap: break-word;
+                  overflow-wrap: break-word;
+              }
+              /* --- FOOTER --- */
+              footer {
+                  background-color: var(--secondary-color);
+                  color: white;
+                  padding: 15px 20px;
+                  margin-top: auto;
+                  display: grid;
+                  grid-template-columns: 1fr 1fr 1.2fr; 
+                  gap: 12px;
+                  align-items: center;
+                  border-top: 5px solid var(--accent-red);
+                  flex-shrink: 0;
+              }
+              /* Column 1: Address */
+              .footer-col-1 {
+                  text-align: left;
+              }
+              .clinic-title-en {
+                  font-weight: 700;
+                  font-size: 18px;
+                  margin-bottom: 5px;
+                  color: #bef264; /* Lime accent for contrast */
+              }
+              .clinic-address {
+                  font-size: 11px;
+                  opacity: 0.9;
+                  line-height: 1.4;
+              }
+              .clinic-phones {
+                  margin-top: 8px;
+                  font-size: 12px;
+                  font-weight: 600;
+              }
+              /* Column 3: Timing & QR (Moved to Center) */
+              .footer-col-3 {
+                  text-align: center;
+                  display: flex;
+                  flex-direction: column;
+                  align-items: center;
+                  gap: 10px;
+                  border-left: 1px solid rgba(255,255,255,0.15);
+                  border-right: 1px solid rgba(255,255,255,0.15);
+                  padding: 0 10px;
+              }
+              .timing-badge {
+                  background: rgba(255,255,255,0.1);
+                  padding: 5px 10px;
+                  border-radius: 6px;
+                  font-size: 11px;
+                  font-family: 'Noto Nastaliq Urdu', serif;
+                  text-align: center;
+              }
+              .qr-box {
+                  background: white;
+                  padding: 4px;
+                  border-radius: 4px;
+                  width: 60px;
+                  height: 60px;
+              }
+              .qr-box img {
+                  width: 100%;
+                  height: 100%;
+              }
+              /* Column 2: Urdu Doctor Profile (Moved to Right) */
+              .footer-col-2 {
+                  text-align: right;
+                  padding: 0 5px;
+              }
+              .urdu-doc-name {
+                  font-family: 'Noto Nastaliq Urdu', serif;
+                  font-size: 20px;
+                  font-weight: 700;
+                  margin-bottom: 5px;
+                  color: white;
+              }
+              .urdu-details {
+                  font-family: 'Noto Nastaliq Urdu', serif;
+                  font-size: 12px;
+                  color: #e2e8f0;
+                  line-height: 1.6;
+                  direction: rtl;
+              }
+              /* Print Optimizations */
+              @media print {
+                  @page {
+                      size: A4;
+                      margin: 0;
+                  }
+                  * {
+                      -webkit-print-color-adjust: exact !important;
+                      print-color-adjust: exact !important;
+                      color-adjust: exact !important;
+                  }
+                  body {
+                      background: white;
+                      padding: 0;
+                      margin: 0;
+                      display: flex;
+                      justify-content: center;
+                  }
+                  .page-container {
+                      box-shadow: none;
+                      width: 210mm;
+                      min-height: 297mm;
+                      margin: 0 auto;
+                      padding: 0;
+                      display: flex;
+                      flex-direction: column;
+                      page-break-inside: avoid;
+                      overflow: visible;
+                  }
+                  /* Allow content to flow to next page if needed */
+                  .rx-lines > div {
+                      page-break-inside: avoid;
+                  }
+                  /* If content is very long, allow it to continue on next page */
+                  @page {
+                      size: A4;
+                      margin: 0;
+                  }
+                  header {
+                      padding: 25px 20px 15px 20px;
+                      page-break-inside: avoid;
+                      page-break-after: avoid;
+                  }
+                  .patient-section {
+                      padding: 12px 20px;
+                      page-break-inside: avoid;
+                      page-break-after: avoid;
+                  }
+                  .main-body {
+                      flex: 1;
+                      min-height: 0;
+                      page-break-inside: avoid;
+                      overflow: visible;
+                  }
+                  .rx-lines {
+                      min-height: auto;
+                      max-height: none;
+                      overflow: visible;
+                      page-break-inside: auto;
+                      /* Allow content to flow naturally */
+                  }
+                  .rx-area {
+                      overflow: visible;
+                      page-break-inside: auto;
+                  }
+                  /* Prevent breaking individual medication items */
+                  .rx-lines > div {
+                      page-break-inside: avoid;
+                      orphans: 2;
+                      widows: 2;
+                  }
+                  footer {
+                      margin-top: auto;
+                      padding: 15px 18px;
+                      page-break-inside: avoid;
+                      page-break-before: avoid;
+                  }
+                  .rx-area {
+                      padding: 30px 20px;
+                  }
+                  .sidebar {
+                      padding: 25px 12px;
+                  }
+                  .input-line, .vital-input {
+                      border: none;
+                      border-bottom: 1px solid #ccc;
+                  }
+                  .logo-box {
+                      -webkit-print-color-adjust: exact;
+                      print-color-adjust: exact;
+                      background-color: var(--primary-color) !important;
+                  }
+              }
           </style>
-        </head>
-        <body>
-          <div class="header">
-            <h1>PRESCRIPTION</h1>
-            <p>Dr. ${user?.name || "Doctor"}</p>
+      </head>
+      <body>
+          <div class="page-container">
+              <header>
+                  <div class="doc-profile">
+                      <div class="logo-box">
+                          <i class="fa-solid fa-user-doctor"></i>
+                      </div>
+                      <div class="doc-info">
+                          <h1>${doctorName}</h1>
+                          <span class="highlight-degrees">${doctorSpecialization}</span>
+                          <p>Fellowship in Internal Medicine (Pak)</p>
+                          <p>Medical Specialist & Family Physician</p>
+                          <p style="font-weight: bold; color: var(--primary-color); margin-top: 5px;">PMDC: ${doctorLicense}</p>
+                      </div>
+                  </div>
+              </header>
+              <div class="patient-section">
+                  <div class="input-group">
+                      <span class="label"><i class="fa-regular fa-user"></i> Patient:</span>
+                      <div class="input-line">${patientName}</div>
+                  </div>
+                  <div class="input-group">
+                      <span class="label"><i class="fa-solid fa-calendar-days"></i> Date:</span>
+                      <div class="date-box">${formattedDate}</div>
+                  </div>
+              </div>
+              <div class="main-body">
+                  <i class="fa-solid fa-staff-snake watermark"></i>
+                  <aside class="sidebar">
+                      <div>
+                          <div class="sidebar-title"><i class="fa-solid fa-clipboard-list"></i> Clinical Records</div>
+                      </div> 
+                  </aside>
+                  <main class="rx-area">
+                      <div class="rx-header">
+                          <span><i class="fa-solid fa-prescription"></i></span>
+                          <span style="font-size: 12px; color: #94a3b8; font-family: sans-serif; font-weight: normal;">Not Valid for Court Evidence</span>
+                      </div>
+                      <div class="rx-lines">
+                          ${prescriptionContent}
+                      </div>
+                  </main>
+              </div>
+              <footer>
+                  <div class="footer-col-1">
+                      <div class="clinic-title-en">${clinicName}</div>
+                      <div class="clinic-address">
+                          <i class="fa-solid fa-location-dot"></i> ${clinicAddress}
+                      </div>
+                      <div class="clinic-phones">
+                          <i class="fa-solid fa-phone"></i> ${clinicPhones}
+                      </div>
+                  </div>
+                  <div class="footer-col-3">
+                      <div class="timing-badge">
+                          اوقات: صبح 9 تا 1 بجے | عصر تا مغرب<br>
+                          <span style="font-size:10px; color:#fca5a5;">(چھٹی بروز اتوار) Sunday Closed</span>
+                      </div>
+                  </div>
+                  <div class="footer-col-2">
+                      <div class="urdu-doc-name">${doctorName.includes('Shahid') ? 'ڈاکٹر شاہد غنی' : 'ڈاکٹر'}</div>
+                      <div class="urdu-details">
+                          میڈیکل سپیشلسٹ اینڈ فیملی فزیشن<br>
+                          ماہر امراض: معدہ، جگر، گردہ، شوگر، بلڈ پریشر، دل
+                      </div>
+                  </div>
+              </footer>
           </div>
-          <div class="patient-info">
-            <p><strong>Patient:</strong> ${patientName}</p>
-            <p><strong>Date:</strong> ${new Date(prescription.createdAt).toLocaleDateString()}</p>
-          </div>
-          ${prescription.diagnosis ? `<div class="section"><strong>Diagnosis:</strong> ${prescription.diagnosis}</div>` : ""}
-          <div class="section">
-            <strong>Medications:</strong>
-            <div class="medications">
-              ${medications.length > 0 ? medications.map((m) => `<div>• ${m}</div>`).join("") : "<div>No medications listed</div>"}
-            </div>
-          </div>
-          ${prescription.instructions ? `<div class="section"><strong>Instructions:</strong> ${prescription.instructions}</div>` : ""}
-          ${prescription.notes ? `<div class="section"><strong>Notes:</strong> ${prescription.notes}</div>` : ""}
-        </body>
+      </body>
       </html>
     `;
     printWindow.document.write(printContent);
     printWindow.document.close();
-    printWindow.print();
+    // Small delay to ensure content is loaded before printing
+    setTimeout(() => {
+      printWindow.print();
+    }, 250);
   };
 
   if (loading) {
-    return <div className="flex h-screen items-center justify-center">Loading...</div>;
+    return (
+      <Layout>
+        <div className="flex h-screen items-center justify-center">
+          <div className="text-center">
+            <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-primary-500 border-r-transparent"></div>
+            <p className="mt-4 text-gray-600">Loading dashboard...</p>
+          </div>
+        </div>
+      </Layout>
+    );
   }
 
   return (
     <Layout>
-      <div className="space-y-6">
-        <h2 className="text-3xl font-bold text-blue-600">Doctor Dashboard</h2>
+      <div className="space-y-6 animate-fade-in">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-4xl font-display font-bold bg-gradient-to-r from-primary-600 to-indigo-600 bg-clip-text text-transparent">
+              Doctor Dashboard
+            </h2>
+            <p className="mt-1 text-gray-600">Manage appointments and patient care</p>
+          </div>
+        </div>
 
         {/* Patient Numbers Display - Prominent */}
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div className="rounded-lg bg-blue-50 p-6 shadow-md border-2 border-blue-200">
-            <div className="text-center">
-              <p className="text-sm text-gray-600 mb-2">Waiting Patients</p>
-              <p className="text-5xl font-extrabold text-blue-600">{waitingPatients.length}</p>
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <div className="stat-card group">
+            <div className="relative z-10">
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Waiting Patients</p>
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center shadow-lg shadow-primary-500/20">
+                  <Phone size={24} className="text-white" />
+                </div>
+              </div>
+              <p className="text-6xl font-display font-bold bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent">
+                {waitingPatients.length}
+              </p>
+              <p className="mt-2 text-sm text-gray-500">In queue</p>
             </div>
           </div>
-          <div className="rounded-lg bg-green-50 p-6 shadow-md border-2 border-green-200">
-            <div className="text-center">
-              <p className="text-sm text-gray-600 mb-2">Current Patient</p>
-              <p className="text-5xl font-extrabold text-green-600">
+          <div className="stat-card group" style={{ background: 'linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%)' }}>
+            <div className="relative z-10">
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Current Patient</p>
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-success-400 to-success-600 flex items-center justify-center shadow-lg shadow-success-500/20">
+                  <CheckCircle size={24} className="text-white" />
+                </div>
+              </div>
+              <p className="text-6xl font-display font-bold bg-gradient-to-r from-success-600 to-success-800 bg-clip-text text-transparent">
                 {currentAppointment ? `#${currentAppointment.ticketNumber}` : "-"}
               </p>
+              <p className="mt-2 text-sm text-gray-600">Active appointment</p>
             </div>
           </div>
         </div>
 
         {/* Waiting Patients List */}
-        <div className="rounded-lg bg-white p-6 shadow-md">
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-xl font-semibold">Waiting Patients Queue</h3>
+        <div className="card p-6 animate-slide-up">
+          <div className="mb-6 flex items-center justify-between">
+            <div>
+              <h3 className="text-2xl font-display font-bold text-gray-800">Waiting Patients Queue</h3>
+              <p className="mt-1 text-sm text-gray-500">Patients waiting for consultation</p>
+            </div>
             <button
               onClick={handleCallNext}
               disabled={waitingPatients.length === 0 || currentAppointment}
-              className="flex items-center gap-2 rounded bg-green-600 px-4 py-2 text-white hover:bg-green-700 disabled:opacity-50"
+              className="btn-success disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
             >
               <Phone size={20} />
               Call Next Patient
             </button>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-3">
             {waitingPatients.map((appointment, index) => (
               <div
                 key={appointment.id}
-                className="flex items-center justify-between rounded border-2 p-4 hover:bg-gray-50"
+                className="group flex items-center justify-between rounded-xl border border-gray-200 bg-white p-4 transition-all duration-200 hover:border-primary-300 hover:shadow-md"
               >
                 <div className="flex items-center gap-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-600 text-2xl font-bold text-white">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 text-xl font-bold text-white shadow-lg shadow-primary-500/20 group-hover:scale-110 transition-transform">
                     {index + 1}
                   </div>
                   <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-2xl font-extrabold text-blue-600">#{appointment.ticketNumber}</span>
-                      <span className="text-lg font-semibold">{appointment.patient.name}</span>
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl font-display font-bold text-primary-600">#{appointment.ticketNumber}</span>
+                      <span className="text-lg font-semibold text-gray-800">{appointment.patient.name}</span>
                     </div>
-                    <span className="text-sm text-gray-500">
+                    <span className="text-sm text-gray-500 flex items-center gap-1 mt-1">
+                      <Calendar size={14} />
                       {new Date(appointment.createdAt).toLocaleTimeString()}
                     </span>
                   </div>
@@ -408,22 +934,33 @@ export default function DoctorDashboard() {
               </div>
             ))}
             {waitingPatients.length === 0 && (
-              <p className="py-8 text-center text-gray-500">No waiting patients</p>
+              <div className="py-12 text-center">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
+                  <Users size={32} className="text-gray-400" />
+                </div>
+                <p className="text-gray-500 font-medium">No waiting patients</p>
+                <p className="text-sm text-gray-400 mt-1">New patients will appear here</p>
+              </div>
             )}
           </div>
         </div>
 
         {/* Current Appointment */}
         {currentAppointment && (
-          <div className="space-y-6">
-            <div className="rounded-lg bg-blue-50 p-6 shadow-md">
-              <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-xl font-semibold">
-                  Current Patient: {currentAppointment.patient.name} (Ticket #{currentAppointment.ticketNumber})
-                </h3>
+          <div className="space-y-6 animate-slide-up">
+            <div className="card p-6 bg-gradient-to-br from-primary-50 via-blue-50 to-indigo-50 border-primary-200">
+              <div className="mb-6 flex items-center justify-between">
+                <div>
+                  <h3 className="text-2xl font-display font-bold text-gray-800">
+                    Current Patient
+                  </h3>
+                  <p className="mt-1 text-gray-600">
+                    {currentAppointment.patient.name} • Ticket #{currentAppointment.ticketNumber}
+                  </p>
+                </div>
                 <button
                   onClick={handleCompleteAppointment}
-                  className="flex items-center gap-2 rounded bg-green-600 px-4 py-2 text-white hover:bg-green-700"
+                  className="btn-success"
                 >
                   <CheckCircle size={20} />
                   Complete Appointment
@@ -431,65 +968,83 @@ export default function DoctorDashboard() {
               </div>
 
               {/* Patient Info */}
-              <div className="mb-4 grid grid-cols-2 gap-4">
-                <div>
-                  <strong>Name:</strong> {currentAppointment.patient.name}
+              <div className="mb-6 grid grid-cols-2 gap-4">
+                <div className="rounded-xl bg-white/60 p-4 border border-white/80">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Name</p>
+                  <p className="text-base font-semibold text-gray-800">{currentAppointment.patient.name}</p>
                 </div>
-                <div>
-                  <strong>Phone:</strong> {currentAppointment.patient.phone || "-"}
+                <div className="rounded-xl bg-white/60 p-4 border border-white/80">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Phone</p>
+                  <p className="text-base font-semibold text-gray-800">{currentAppointment.patient.phone || "-"}</p>
                 </div>
-                <div>
-                  <strong>Age:</strong> {currentAppointment.patient.age || "-"}
+                <div className="rounded-xl bg-white/60 p-4 border border-white/80">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Age</p>
+                  <p className="text-base font-semibold text-gray-800">{currentAppointment.patient.age || "-"}</p>
                 </div>
-                <div>
-                  <strong>Gender:</strong> {currentAppointment.patient.gender || "-"}
+                <div className="rounded-xl bg-white/60 p-4 border border-white/80">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Gender</p>
+                  <p className="text-base font-semibold text-gray-800">{currentAppointment.patient.gender || "-"}</p>
                 </div>
               </div>
 
               {/* Action Buttons */}
-              <div className="flex gap-2">
+              <div className="flex gap-3">
                 <button
                   onClick={() => setShowPrescriptionForm(!showPrescriptionForm)}
-                  className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+                  className="btn-primary"
                 >
-                  <Plus size={16} className="inline mr-2" />
-                  Add Prescription
+                  <Plus size={18} />
+                  {showPrescriptionForm ? "Hide Prescription Form" : "Add Prescription"}
+                </button>
+                <button
+                  onClick={() => loadPatientHistory(currentAppointment.patientId)}
+                  className="flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-500 to-indigo-600 text-white font-semibold shadow-lg shadow-indigo-500/20 hover:shadow-xl hover:shadow-indigo-500/30 transition-all duration-200 hover:scale-105"
+                >
+                  <History size={18} />
+                  View History
                 </button>
               </div>
             </div>
 
             {/* Prescription Form */}
             {showPrescriptionForm && (
-              <div className="rounded-lg bg-gradient-to-br from-blue-50 to-white p-6 shadow-lg border-2 border-blue-200">
+              <div className="card p-8 bg-gradient-to-br from-white via-primary-50/30 to-indigo-50/20 border-primary-200 animate-scale-in">
                 <div className="mb-6 flex items-center justify-between">
-                  <h3 className="text-2xl font-bold text-blue-600 flex items-center gap-2">
-                    <Stethoscope size={28} />
-                    Create New Prescription
-                  </h3>
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-lg shadow-primary-500/20">
+                      <Stethoscope size={24} className="text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-2xl font-display font-bold text-gray-800">
+                        Create New Prescription
+                      </h3>
+                      <p className="text-sm text-gray-500 mt-1">Fill in the prescription details below</p>
+                    </div>
+                  </div>
                   <button 
                     onClick={() => setShowPrescriptionForm(false)}
-                    className="rounded-full bg-gray-200 p-2 hover:bg-gray-300 transition-colors"
+                    className="rounded-xl bg-gray-100 p-2 hover:bg-gray-200 transition-colors text-gray-600 hover:text-gray-800"
                     title="Close"
                   >
-                    <X size={24} />
+                    <X size={20} />
                   </button>
                 </div>
-                <form onSubmit={handleCreatePrescription} className="space-y-5">
+                <form onSubmit={handleCreatePrescription} className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
+                  <div>
                       <label className="mb-2 block text-sm font-semibold text-gray-700">
                         Diagnosis <span className="text-red-500">*</span>
                       </label>
-                      <input
-                        type="text"
-                        value={prescriptionData.diagnosis}
-                        onChange={(e) => setPrescriptionData({ ...prescriptionData, diagnosis: e.target.value })}
-                        className="w-full rounded-lg border-2 border-gray-300 px-4 py-2 focus:border-blue-500 focus:outline-none transition-colors"
+                    <input
+                      type="text"
+                      value={prescriptionData.diagnosis}
+                      onChange={(e) => setPrescriptionData({ ...prescriptionData, diagnosis: e.target.value })}
+                        className="input-field"
                         placeholder="Enter diagnosis..."
                         required
-                      />
-                    </div>
-                    <div>
+                    />
+                  </div>
+                  <div>
                       <label className="mb-2 block text-sm font-semibold text-gray-700">
                         Patient Name
                       </label>
@@ -497,7 +1052,7 @@ export default function DoctorDashboard() {
                         type="text"
                         value={currentAppointment?.patient?.name || ""}
                         disabled
-                        className="w-full rounded-lg border-2 border-gray-200 bg-gray-100 px-4 py-2 text-gray-600"
+                        className="input-field bg-gray-50 text-gray-600 cursor-not-allowed"
                       />
                     </div>
                   </div>
@@ -512,10 +1067,10 @@ export default function DoctorDashboard() {
                       onChange={(e) => setPrescriptionData({ ...prescriptionData, medications: e.target.value })}
                       rows={6}
                       required
-                      className="w-full rounded-lg border-2 border-gray-300 px-4 py-3 focus:border-blue-500 focus:outline-none transition-colors font-mono text-sm"
+                      className="input-field font-mono text-sm"
                       placeholder="Paracetamol 500mg - 1 tablet twice daily&#10;Amoxicillin 250mg - 1 capsule three times daily&#10;..."
                     />
-                    <p className="mt-1 text-xs text-gray-500">
+                    <p className="mt-2 text-xs text-gray-500">
                       Example: Medicine Name - Dosage - Frequency
                     </p>
                   </div>
@@ -528,7 +1083,7 @@ export default function DoctorDashboard() {
                       value={prescriptionData.instructions}
                       onChange={(e) => setPrescriptionData({ ...prescriptionData, instructions: e.target.value })}
                       rows={4}
-                      className="w-full rounded-lg border-2 border-gray-300 px-4 py-3 focus:border-blue-500 focus:outline-none transition-colors"
+                      className="input-field"
                       placeholder="Take with food...&#10;Avoid alcohol...&#10;Complete the full course..."
                     />
                   </div>
@@ -541,19 +1096,19 @@ export default function DoctorDashboard() {
                       value={prescriptionData.notes}
                       onChange={(e) => setPrescriptionData({ ...prescriptionData, notes: e.target.value })}
                       rows={3}
-                      className="w-full rounded-lg border-2 border-gray-300 px-4 py-3 focus:border-blue-500 focus:outline-none transition-colors"
+                      className="input-field"
                       placeholder="Any additional notes or observations..."
                     />
                   </div>
                   
                   <div className="flex gap-3 pt-4">
-                    <button
-                      type="submit"
-                      className="flex-1 rounded-lg bg-blue-600 px-6 py-3 text-white font-semibold hover:bg-blue-700 transition-colors shadow-md hover:shadow-lg"
-                    >
+                  <button
+                    type="submit"
+                      className="btn-primary flex-1"
+                  >
                       <Plus size={20} className="inline mr-2" />
-                      Save Prescription
-                    </button>
+                    Save Prescription
+                  </button>
                     <button
                       type="button"
                       onClick={() => setShowPrescriptionForm(false)}
@@ -682,7 +1237,7 @@ export default function DoctorDashboard() {
                                     {prescription.doctor.specialization && ` (${prescription.doctor.specialization})`}
                                   </p>
                                 )}
-                                {prescription.diagnosis && (
+                              {prescription.diagnosis && (
                                   <div className="mb-2">
                                     <p className="text-sm font-semibold text-gray-700">Diagnosis:</p>
                                     <p className="text-sm text-gray-600 bg-yellow-50 p-2 rounded">{prescription.diagnosis}</p>
@@ -707,18 +1262,18 @@ export default function DoctorDashboard() {
                                     <p className="text-sm font-semibold text-gray-700">Notes:</p>
                                     <p className="text-sm text-gray-600 bg-gray-50 p-2 rounded">{prescription.notes}</p>
                                   </div>
-                                )}
-                              </div>
-                              <button
-                                onClick={() => printPrescription(prescription)}
+                              )}
+                            </div>
+                            <button
+                              onClick={() => printPrescription(prescription)}
                                 className="flex items-center gap-1 rounded bg-blue-600 px-3 py-2 text-white hover:bg-blue-700 ml-4"
                                 title="Print Prescription"
-                              >
+                            >
                                 <Printer size={18} />
-                                Print
-                              </button>
-                            </div>
+                              Print
+                            </button>
                           </div>
+                        </div>
                         );
                       })}
                     </div>
@@ -758,7 +1313,7 @@ export default function DoctorDashboard() {
                                     })}
                                   </p>
                                   {report.testType && (
-                                    <p className="text-sm text-gray-600">
+                          <p className="text-sm text-gray-600">
                                       <strong>Test Type:</strong> {report.testType}
                                     </p>
                                   )}
@@ -833,16 +1388,16 @@ export default function DoctorDashboard() {
                                   <div className="mt-2">
                                     <a
                                       href={fileUrl}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
+                              target="_blank"
+                              rel="noopener noreferrer"
                                       className="text-blue-600 hover:underline text-sm"
-                                    >
+                            >
                                       <FileText size={16} className="inline mr-1" />
                                       View Attachment
-                                    </a>
+                            </a>
                                   </div>
-                                )}
-                              </div>
+                          )}
+                        </div>
                             </div>
                           </div>
                         );

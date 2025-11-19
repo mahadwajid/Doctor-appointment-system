@@ -98,13 +98,27 @@ export default function LabDashboard() {
   };
 
   if (loading) {
-    return <div className="flex h-screen items-center justify-center">Loading...</div>;
+    return (
+      <Layout>
+        <div className="flex h-screen items-center justify-center">
+          <div className="text-center">
+            <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-primary-500 border-r-transparent"></div>
+            <p className="mt-4 text-gray-600">Loading dashboard...</p>
+          </div>
+        </div>
+      </Layout>
+    );
   }
 
   return (
     <Layout>
-      <div className="space-y-6">
-        <h2 className="text-3xl font-bold text-blue-600">Laboratory Dashboard</h2>
+      <div className="space-y-6 animate-fade-in">
+        <div>
+          <h2 className="text-4xl font-display font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
+            Lab Dashboard
+          </h2>
+          <p className="mt-1 text-gray-600">Upload and manage lab reports</p>
+        </div>
 
         {/* Upload Form */}
         <div className="rounded-lg bg-white p-6 shadow-md">

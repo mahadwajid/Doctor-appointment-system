@@ -157,22 +157,38 @@ export default function ReceptionDashboard() {
   };
 
   if (loading) {
-    return <div className="flex h-screen items-center justify-center">Loading...</div>;
+    return (
+      <Layout>
+        <div className="flex h-screen items-center justify-center">
+          <div className="text-center">
+            <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-primary-500 border-r-transparent"></div>
+            <p className="mt-4 text-gray-600">Loading dashboard...</p>
+          </div>
+        </div>
+      </Layout>
+    );
   }
 
   return (
     <Layout>
-      <div className="space-y-6">
-        <h2 className="text-3xl font-bold text-blue-600">Reception Dashboard</h2>
+      <div className="space-y-6 animate-fade-in">
+        <div>
+          <h2 className="text-4xl font-display font-bold bg-gradient-to-r from-success-600 to-green-600 bg-clip-text text-transparent">
+            Reception Dashboard
+          </h2>
+          <p className="mt-1 text-gray-600">Register patients and manage appointments</p>
+        </div>
 
         {/* Statistics */}
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <div className="rounded-lg bg-white p-6 shadow-md">
-            <div className="flex items-center gap-3">
-              <Clock className="text-orange-600" size={32} />
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+          <div className="stat-card">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center shadow-lg shadow-orange-500/20">
+                <Clock className="text-white" size={28} />
+              </div>
               <div>
-                <p className="text-sm text-gray-600">Waiting Patients</p>
-                <p className="text-2xl font-bold">{waitingAppointments.length}</p>
+                <p className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Waiting Patients</p>
+                <p className="text-3xl font-display font-bold text-gray-800 mt-1">{waitingAppointments.length}</p>
               </div>
             </div>
           </div>

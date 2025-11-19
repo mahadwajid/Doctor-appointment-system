@@ -260,47 +260,81 @@ export default function AdminDashboard() {
   };
 
   if (loading) {
-    return <div className="flex h-screen items-center justify-center">Loading...</div>;
+    return (
+      <Layout>
+        <div className="flex h-screen items-center justify-center">
+          <div className="text-center">
+            <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-primary-500 border-r-transparent"></div>
+            <p className="mt-4 text-gray-600">Loading dashboard...</p>
+          </div>
+        </div>
+      </Layout>
+    );
   }
 
   return (
     <Layout>
-      <div className="space-y-6">
-        <h2 className="text-3xl font-bold text-blue-600">Super Admin Dashboard</h2>
+      <div className="space-y-6 animate-fade-in">
+        <div>
+          <h2 className="text-4xl font-display font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+            Super Admin Dashboard
+          </h2>
+          <p className="mt-1 text-gray-600">Manage users, patients, and system settings</p>
+        </div>
 
         {/* Tabs */}
-        <div className="flex gap-2 border-b">
+        <div className="flex gap-2 border-b border-gray-200">
           <button
             onClick={() => setActiveTab("overview")}
-            className={`px-4 py-2 font-semibold ${
-              activeTab === "overview" ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-600"
+            className={`px-6 py-3 font-semibold transition-all duration-200 relative ${
+              activeTab === "overview" 
+                ? "text-primary-600" 
+                : "text-gray-600 hover:text-gray-800"
             }`}
           >
             Overview
+            {activeTab === "overview" && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-primary-500 to-primary-600"></div>
+            )}
           </button>
           <button
             onClick={() => setActiveTab("users")}
-            className={`px-4 py-2 font-semibold ${
-              activeTab === "users" ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-600"
+            className={`px-6 py-3 font-semibold transition-all duration-200 relative ${
+              activeTab === "users" 
+                ? "text-primary-600" 
+                : "text-gray-600 hover:text-gray-800"
             }`}
           >
             Manage Users
+            {activeTab === "users" && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-primary-500 to-primary-600"></div>
+            )}
           </button>
           <button
             onClick={() => setActiveTab("patients")}
-            className={`px-4 py-2 font-semibold ${
-              activeTab === "patients" ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-600"
+            className={`px-6 py-3 font-semibold transition-all duration-200 relative ${
+              activeTab === "patients" 
+                ? "text-primary-600" 
+                : "text-gray-600 hover:text-gray-800"
             }`}
           >
             Patients
+            {activeTab === "patients" && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-primary-500 to-primary-600"></div>
+            )}
           </button>
           <button
             onClick={() => setActiveTab("logs")}
-            className={`px-4 py-2 font-semibold ${
-              activeTab === "logs" ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-600"
+            className={`px-6 py-3 font-semibold transition-all duration-200 relative ${
+              activeTab === "logs" 
+                ? "text-primary-600" 
+                : "text-gray-600 hover:text-gray-800"
             }`}
           >
             System Logs
+            {activeTab === "logs" && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-primary-500 to-primary-600"></div>
+            )}
           </button>
         </div>
 
