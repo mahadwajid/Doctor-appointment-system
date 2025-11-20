@@ -412,6 +412,26 @@ export default function DoctorDashboard() {
                   background: linear-gradient(to bottom, #ffffff, #f8fafc);
                   flex-shrink: 0;
               }
+              .urdu-header-section {
+                  text-align: right;
+                  padding-left: 10px;
+                  padding-right: 20px;
+                  margin-right: 20px;
+              }
+              .urdu-header-section .urdu-doc-name {
+                  font-family: 'Noto Nastaliq Urdu', serif;
+                  font-size: 22px;
+                  font-weight: 700;
+                  margin-bottom: 8px;
+                  color: var(--secondary-color);
+              }
+              .urdu-header-section .urdu-details {
+                  font-family: 'Noto Nastaliq Urdu', serif;
+                  font-size: 13px;
+                  color: var(--text-light);
+                  line-height: 1.8;
+                  direction: rtl;
+              }
               .doc-profile {
                   display: flex;
                   gap: 20px;
@@ -586,7 +606,7 @@ export default function DoctorDashboard() {
                   padding: 15px 20px;
                   margin-top: auto;
                   display: grid;
-                  grid-template-columns: 1fr 1fr 1.2fr; 
+                  grid-template-columns: 1fr 1fr; 
                   gap: 12px;
                   align-items: center;
                   border-top: 5px solid var(--accent-red);
@@ -612,16 +632,15 @@ export default function DoctorDashboard() {
                   font-size: 12px;
                   font-weight: 600;
               }
-              /* Column 3: Timing & QR (Moved to Center) */
+              /* Column 2: Timing & QR */
               .footer-col-3 {
-                  text-align: center;
+                  text-align: right;
                   display: flex;
                   flex-direction: column;
-                  align-items: center;
+                  align-items: flex-end;
                   gap: 10px;
-                  border-left: 1px solid rgba(255,255,255,0.15);
-                  border-right: 1px solid rgba(255,255,255,0.15);
-                  padding: 0 10px;
+                  padding: 0 10px 0 20px;
+                  margin-left: auto;
               }
               .timing-badge {
                   background: rgba(255,255,255,0.1);
@@ -629,7 +648,8 @@ export default function DoctorDashboard() {
                   border-radius: 6px;
                   font-size: 11px;
                   font-family: 'Noto Nastaliq Urdu', serif;
-                  text-align: center;
+                  text-align: right;
+                  direction: rtl;
               }
               .qr-box {
                   background: white;
@@ -641,25 +661,6 @@ export default function DoctorDashboard() {
               .qr-box img {
                   width: 100%;
                   height: 100%;
-              }
-              /* Column 2: Urdu Doctor Profile (Moved to Right) */
-              .footer-col-2 {
-                  text-align: right;
-                  padding: 0 5px;
-              }
-              .urdu-doc-name {
-                  font-family: 'Noto Nastaliq Urdu', serif;
-                  font-size: 20px;
-                  font-weight: 700;
-                  margin-bottom: 5px;
-                  color: white;
-              }
-              .urdu-details {
-                  font-family: 'Noto Nastaliq Urdu', serif;
-                  font-size: 12px;
-                  color: #e2e8f0;
-                  line-height: 1.6;
-                  direction: rtl;
               }
               /* Print Optimizations */
               @media print {
@@ -703,6 +704,10 @@ export default function DoctorDashboard() {
                       padding: 25px 20px 15px 20px;
                       page-break-inside: avoid;
                       page-break-after: avoid;
+                  }
+                  .urdu-header-section {
+                      padding-right: 15px;
+                      margin-right: 15px;
                   }
                   .patient-section {
                       padding: 12px 20px;
@@ -771,6 +776,13 @@ export default function DoctorDashboard() {
                           <p style="font-weight: bold; color: var(--primary-color); margin-top: 5px;">PMDC: ${doctorLicense}</p>
                       </div>
                   </div>
+                  <div class="urdu-header-section">
+                      <div class="urdu-doc-name">${doctorName.includes('Shahid') ? 'ڈاکٹر شاہد غنی' : 'ڈاکٹر'}</div>
+                      <div class="urdu-details">
+                          میڈیکل سپیشلسٹ اینڈ فیملی فزیشن<br>
+                          ماہر امراض: معدہ، جگر، گردہ، شوگر، بلڈ پریشر، دل
+                      </div>
+                  </div>
               </header>
               <div class="patient-section">
                   <div class="input-group">
@@ -813,13 +825,6 @@ export default function DoctorDashboard() {
                       <div class="timing-badge">
                           اوقات: صبح 9 تا 1 بجے | عصر تا مغرب<br>
                           <span style="font-size:10px; color:#fca5a5;">(چھٹی بروز اتوار) Sunday Closed</span>
-                      </div>
-                  </div>
-                  <div class="footer-col-2">
-                      <div class="urdu-doc-name">${doctorName.includes('Shahid') ? 'ڈاکٹر شاہد غنی' : 'ڈاکٹر'}</div>
-                      <div class="urdu-details">
-                          میڈیکل سپیشلسٹ اینڈ فیملی فزیشن<br>
-                          ماہر امراض: معدہ، جگر، گردہ، شوگر، بلڈ پریشر، دل
                       </div>
                   </div>
               </footer>
@@ -1292,7 +1297,7 @@ export default function DoctorDashboard() {
                         const fileUrl = report.fileUrl 
                           ? (report.fileUrl.startsWith('http') 
                               ? report.fileUrl 
-                              : `${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000'}${report.fileUrl.startsWith('/') ? report.fileUrl : '/' + report.fileUrl}`)
+                              : `${typeof window !== 'undefined' ? `http://${window.location.hostname}:5000` : (process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000')}${report.fileUrl.startsWith('/') ? report.fileUrl : '/' + report.fileUrl}`)
                           : null;
                         return (
                           <div key={report.id} className="rounded-lg border-2 border-purple-200 p-4 hover:border-purple-300 transition-colors">
@@ -1364,7 +1369,7 @@ export default function DoctorDashboard() {
                         const fileUrl = record.fileUrl 
                           ? (record.fileUrl.startsWith('http') 
                               ? record.fileUrl 
-                              : `${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000'}${record.fileUrl.startsWith('/') ? record.fileUrl : '/' + record.fileUrl}`)
+                              : `${typeof window !== 'undefined' ? `http://${window.location.hostname}:5000` : (process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000')}${record.fileUrl.startsWith('/') ? record.fileUrl : '/' + record.fileUrl}`)
                           : null;
                         return (
                           <div key={record.id} className="rounded-lg border-2 border-orange-200 p-4 hover:border-orange-300 transition-colors">

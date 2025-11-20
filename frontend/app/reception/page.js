@@ -121,8 +121,18 @@ export default function ReceptionDashboard() {
   };
 
   const printTicket = (patient, appointment) => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
     // Thermal printer simulation
     const printWindow = window.open("", "_blank");
+
+    // Some browsers / popup blockers may prevent opening a new window
+    if (!printWindow) {
+      console.warn("Ticket print window was blocked by the browser.");
+      return;
+    }
     const printContent = `
       <html>
         <head>

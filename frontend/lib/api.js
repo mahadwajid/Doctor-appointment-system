@@ -1,4 +1,22 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+// Get API URL dynamically based on current hostname
+const getApiUrl = () => {
+  const envUrl = process.env.NEXT_PUBLIC_API_URL;
+
+  if (typeof window !== 'undefined') {
+    // Client-side: prefer env value unless it's bound to localhost while we're on a different host
+    const hostname = window.location.hostname;
+    const isLocalHost = hostname === 'localhost' || hostname === '127.0.0.1';
+
+    if (envUrl && (!envUrl.includes('localhost') || isLocalHost)) {
+      return envUrl;
+    }
+
+    return `http://${hostname}:5000/api`;
+  }
+
+  // Server-side (during build/SSR)
+  return envUrl || 'http://localhost:5000/api';
+};
 
 // Helper function to get auth token
 const getToken = () => {
@@ -23,7 +41,7 @@ const apiCall = async (endpoint, options = {}) => {
   // Extract cache option if provided
   const { cache, ...fetchOptions } = options;
 
-  const response = await fetch(`${API_URL}${endpoint}`, {
+  const response = await fetch(`${getApiUrl()}${endpoint}`, {
     ...fetchOptions,
     headers,
     cache: cache || 'default',
@@ -131,7 +149,7 @@ export const labAPI = {
   },
   upload: (formData) => {
     const token = getToken();
-    return fetch(`${API_URL}/lab`, {
+    return fetch(`${getApiUrl()}/lab`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -163,7 +181,7 @@ export const medicalRecordsAPI = {
   },
   create: (formData) => {
     const token = getToken();
-    return fetch(`${API_URL}/medical-records`, {
+    return fetch(`${getApiUrl()}/medical-records`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
